@@ -1,4 +1,4 @@
-# Проект "Cloud Services Engineer Docker Project Sem2"
+# Проект "Cloud Services Engineer Docker Project Sem3"
 
 **Краткое описание**  
 Учебный проект по курсу "Cloud Services Engineer", магазин пельменей "Момо". Он демонстрирует сборку и оркестрацию микросервисов с помощью Docker Compose. В составе проекта:
@@ -65,8 +65,8 @@ mongosh --username ${MONGO_INITDB_ROOT_USERNAME} --password ${MONGO_INITDB_ROOT_
 
 1. Клонировать репозиторий
 ```bash
-git clone https://github.com/ClarkeFeed/cloud-services-engineer-docker-project-sem2.git
-cd cloud-services-engineer-docker-project-sem2
+git clone https://github.com/ClarkeFeed/cloud-services-engineer-sausage-store-project-sem3.git
+cd cloud-services-engineer-sausage-store-project-sem3
 ```
 
 2. Запустить проект со сборкой
@@ -108,7 +108,7 @@ docker ps
 | NEXUS_HELM_REPO_URL      | Репозиторий Nexus Yandex                            | ❌ | ✅ |
 | NEXUS_PASSWORD           | Пароль Nexus Yandex                                 | ❌ | ✅ |
 | NEXUS_USER               | Логин Nexus Yandex                                  | ❌ | ✅ |
-| SAUSAGE_STORE_NAMESPACE  | File                                                | ✅ | ✅ |
+| SAUSAGE_STORE_NAMESPACE  | Namespace проекта                                   | ✅ | ✅ |
 | SSH_PRIVATE_KEY          | id_rsa \| base64 -w 0                               | ❌ | ✅ |
 | SSH_PUBLIC_KEY           | id_rsa.pub                                          | ✅ | ❌ |
 | TF_HTTP_PASSWORD         | GitLab Access Token с правами api и read_api        | ✅ | ✅ |
