@@ -14,6 +14,7 @@
 2. [Требования](#требования)  
 3. [Установка и запуск](#установка-и-запуск)
 4. [Оптимизация](#оптимизация)
+5. [Переменные](#переменные-окружения-в-cicd-variables)
 ---
 
 ## Технологии
@@ -94,3 +95,23 @@ docker ps
 Это позволяет не пересобирать зависимости при каждом изменении исходного кода, .dockerignore позволяет исключить добавления ненужных файлов при сборке.
 
 Для nginx был настроен gzip и Cache-Control для кеширования и уменьшения размера передаваемых файлов.
+
+## Переменные окружения в CI/CD variables:
+| Переменная              | Описание                                              | Protected | Masked |
+|--------------------------|-------------------------------------------------------|------------|---------|
+| AUTHORIZED_KEY           | base64-закодированный JSON авторизационного ключа Yandex Cloud | ✅ | ✅ |
+| CLOUD_ID                 | Yandex cloud id                                      | ✅ | ✅ |
+| DOCKER_PASSWORD          | Пароль DockerHub                                     | ✅ | ✅ |
+| DOCKER_USER              | Логин DockerHub                                      | ✅ | ✅ |
+| FOLDER_ID                | Yandex folder id                                    | ❌ | ✅ |
+| KUBE_CONFIG              | base64 kubeconfig (выдаётся в тренажёре)            | ❌ | ✅ |
+| NEXUS_HELM_REPO_URL      | Репозиторий Nexus Yandex                            | ❌ | ✅ |
+| NEXUS_PASSWORD           | Пароль Nexus Yandex                                 | ❌ | ✅ |
+| NEXUS_USER               | Логин Nexus Yandex                                  | ❌ | ✅ |
+| SAUSAGE_STORE_NAMESPACE  | File                                                | ✅ | ✅ |
+| SSH_PRIVATE_KEY          | id_rsa \| base64 -w 0                               | ❌ | ✅ |
+| SSH_PUBLIC_KEY           | id_rsa.pub                                          | ✅ | ❌ |
+| TF_HTTP_PASSWORD         | GitLab Access Token с правами api и read_api        | ✅ | ✅ |
+| VAULT_DB_PASSWORD        | Опциональный пароль в Vault для БД                  | ❌ | ✅ |
+| VAULT_DB_USERNAME        | Опциональный пользователь в Vault для БД            | ✅ | ❌ |
+| VAULT_MONGODB_URI        | Опциональная "ссылка" в Vault для БД                | ❌ | ❌ |
