@@ -1,11 +1,45 @@
-# Проект "Cloud Services Engineer Docker Project Sem3"
+# Проект "Cloud Services Engineer Sausage Store Project sem3"
 
-**Краткое описание**  
-Учебный проект по курсу "Cloud Services Engineer", магазин пельменей "Момо". Он демонстрирует сборку и оркестрацию микросервисов с помощью Docker Compose. В составе проекта:
+# Sausage Store
 
-- **backend** — микросервис на Go, реализующий REST-API.
-- **frontend** — приложение на Vue.js + TypeScript.
+![image](https://user-images.githubusercontent.com/9394918/121517767-69db8a80-c9f8-11eb-835a-e98ca07fd995.png)
 
+## Install helm-chart
+```
+helm install sausage-store-chart ./sausage-store-chart --namespace <KUBE_NAMESPACE>
+```
+
+## Technologies used
+
+* Frontend – TypeScript, Angular.
+* Backend  – Java 16, Spring Boot, Spring Data.
+* Database – H2.
+
+## Installation guide
+### Backend
+
+Install Java 16 and maven and run:
+
+```bash
+cd backend
+mvn package
+cd target
+java -jar sausage-store-0.0.1-SNAPSHOT.jar
+```
+
+### Frontend
+
+Install NodeJS and npm on your computer and run:
+
+```bash
+cd frontend
+npm install
+npm run build
+npm install -g http-server
+sudo http-server ./dist/frontend/ -p 80 --proxy http://localhost:8080
+```
+
+Then open your browser and go to [http://localhost](http://localhost)
 ---
 
 ## Содержание
@@ -19,13 +53,9 @@
 
 ## Технологии
 
-- **Go** (backend)
-- **Vue.js + TypeScript + Nginx** (frontend)
-- **Docker** & **Docker Compose**
-
 - **Frontend** – TypeScript, Angular.
 - **Backend**  – Java 16, Spring Boot, Spring Data.
-- **Database** – H2.
+- **Database** – H2, Postgresql
 - **Infrastructure** - Yandex Cloud
 - **IaC** - Ansible, Terraform
 - **CI/CD** - Gitlab-CI
@@ -62,39 +92,6 @@ mongosh --username ${MONGO_INITDB_ROOT_USERNAME} --password ${MONGO_INITDB_ROOT_
             });
           "
 ```
-
-1. Клонировать репозиторий
-```bash
-git clone https://github.com/ClarkeFeed/cloud-services-engineer-sausage-store-project-sem3.git
-cd cloud-services-engineer-sausage-store-project-sem3
-```
-
-2. Запустить проект со сборкой
-```bash
-docker-compose up --build -d
-```
-
-3. Проверить запущенные контейнеры
-```bash
-docker ps
-```
-
-После успешного запуска должны быть доступны:
-- Frontend: http://localhost(:80)
-- Backend: http://localhost:8081
-
-## Оптимизация
-
-Для уменьшения веса образов в сборке использовались следующие приёмы:
-1. alpine образы;
-2. multi-stage build;
-3. добавлен .dockerignore;
-4. флаг `CGO_ENABLED=0` для backend;
-5. флаги `--no-audit --no-fund` для frontend.
-
-Это позволяет не пересобирать зависимости при каждом изменении исходного кода, .dockerignore позволяет исключить добавления ненужных файлов при сборке.
-
-Для nginx был настроен gzip и Cache-Control для кеширования и уменьшения размера передаваемых файлов.
 
 ## Переменные окружения в CI/CD variables:
 | Переменная              | Описание                                              | Protected | Masked |
