@@ -1,0 +1,6 @@
+.vscode
+authorized_key.json
+keys.json
+infra/.terraform*
+.env
+id_rsa*

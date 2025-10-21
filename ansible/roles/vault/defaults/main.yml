@@ -1,0 +1,12 @@
+---
+vault_version: "1.15.0"
+vault_port: 8200
+vault_dev_root_token: "root"
+vault_config_dir: /opt/vault/config
+vault_data_dir: /opt/vault/data
+vault_addr: http://127.0.0.1:8200
+
+# Database credentials
+db_username: "reports"
+db_password: "reportspassword"
+mongodb_uri: "mongodb://reports:reportspassword@mongodb:27017/sausage-store"

@@ -1,0 +1,6 @@
+skip-check:
+  - CKV_YC_2
+external-checks-dir:
+  - ./custom_policies
+output: cli
+soft-fail: true

@@ -1,0 +1,74 @@
+---
+- name: Create directory for Vault configuration
+  file:
+    path: "{{ vault_config_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Create Vault data directory
+  file:
+    path: "{{ vault_data_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Stop existing Vault container if running
+  docker_container:
+    name: vault
+    state: absent
+  ignore_errors: yes
+
+- name: Run Vault container in dev mode
+  docker_container:
+    name: vault
+    image: "hashicorp/vault:{{ vault_version }}"
+    state: started
+    restart_policy: unless-stopped
+    network_mode: host
+    env:
+      VAULT_DEV_ROOT_TOKEN_ID: "{{ vault_dev_root_token }}"
+      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
+    command: server -dev -dev-root-token-id="{{ vault_dev_root_token }}"
+
+- name: Wait for Vault to be ready
+  wait_for:
+    host: 127.0.0.1
+    port: "{{ vault_port }}"
+    delay: 5
+    timeout: 60
+
+- name: Enable KV secrets engine
+  uri:
+    url: "{{ vault_addr }}/v1/sys/mounts/secret"
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_dev_root_token }}"
+    body_format: json
+    body:
+      type: "kv"
+      options:
+        version: "2"
+    status_code: [200, 204]
+  ignore_errors: yes
+
+- name: Add database secrets to Vault
+  uri:
+    url: "{{ vault_addr }}/v1/secret/data/sausage-store"
+    method: POST
+    headers:
+      X-Vault-Token: "{{ vault_dev_root_token }}"
+    body_format: json
+    body:
+      data:
+        spring.datasource.username: "{{ db_username }}"
+        spring.datasource.password: "{{ db_password }}"
+        spring.data.mongodb.uri: "{{ mongodb_uri }}"
+    status_code: [200, 204]
+
+- name: Display Vault access information
+  debug:
+    msg:
+      - "Vault is running in DEV mode"
+      - "Access URL: http://{{ ansible_host }}:{{ vault_port }}"
+      - "Root token: {{ vault_dev_root_token }}"
+      - "Secrets added to: secret/sausage-store"
+      - "WARNING: This is a DEV configuration, not for production!"

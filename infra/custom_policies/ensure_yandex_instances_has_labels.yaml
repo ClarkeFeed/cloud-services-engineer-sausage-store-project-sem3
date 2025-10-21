@@ -1,0 +1,13 @@
+metadata:
+  name: "Ensure yandex instances has labels"
+  id: CKV_YC_26
+  category: yandex
+  severity: MEDIUM
+scope:
+  provider: yandex
+definition:
+  cond_type: attribute
+  resource_types:
+    - yandex_compute_instance
+  attribute: labels
+  operator: exists

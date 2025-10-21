@@ -1,0 +1,240 @@
+stages:
+  - tests
+  - plan
+  - apply
+  - destroy
+  - terratest
+  - ansible-deploy
+  - build
+  - package
+  - deploy
+
+variables:
+  TF_ROOT: ${CI_PROJECT_DIR}/infra
+  ANSIBLE_ROOT: ${CI_PROJECT_DIR}/ansible
+  OPERATION:
+    description: "Select CI/CD-operation"
+    value: "k8s"
+    options:
+      - "terraform"
+      - "ansible"
+      - "k8s"
+  APPLY:
+    description: "Hand apply infra"
+    value: "false"
+    options:
+      - "false"
+      - "true"
+  DESTROY:
+    description: "Hand destroy infra"
+    value: "false"
+    options:
+      - "false"
+      - "true"
+
+before_script:
+  - cd ${TF_ROOT}
+  - echo ${AUTHORIZED_KEY} | base64 -d > ./authorized_key.json
+  - chmod 600 ./authorized_key.json
+  - echo ${SSH_PUBLIC_KEY} > ./id_rsa.pub
+  - echo ${SSH_PRIVATE_KEY} | base64 -d > ./id_rsa
+  - chmod 600 id_rsa*
+
+# ==================== TERRAFORM STAGES ====================
+
+checkov:
+  stage: tests
+  allow_failure: true
+  image:
+    name: bridgecrew/checkov:latest
+    entrypoint:
+      - '/usr/bin/env'
+      - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+  script:
+    - script -q -c 'checkov -d . --config-file .checkov.yml ; echo $? > CKVEXIT'
+  rules:
+    - if: $OPERATION == "terraform"
+
+plan:
+  stage: plan
+  image:
+    name: hashicorp/terraform:latest
+    entrypoint: [""]
+  variables:
+    TF_VAR_cloud_id: ${CLOUD_ID}
+    TF_VAR_folder_id: ${FOLDER_ID}
+    TF_VAR_ssh_public_key: ${SSH_PUBLIC_KEY}
+    TF_VAR_ssh_private_key: ${SSH_PRIVATE_KEY}
+  script:
+    - cd ${TF_ROOT}
+    - echo ${AUTHORIZED_KEY} | base64 -d > ./authorized_key.json
+    - terraform init
+      -backend-config="address=https://cloud-services-engineer.gitlab.yandexcloud.net/api/v4/projects/${CI_PROJECT_ID}/terraform/state/tfstate"
+      -backend-config="lock_address=https://cloud-services-engineer.gitlab.yandexcloud.net/api/v4/projects/${CI_PROJECT_ID}/terraform/state/tfstate/lock"
+      -backend-config="unlock_address=https://cloud-services-engineer.gitlab.yandexcloud.net/api/v4/projects/${CI_PROJECT_ID}/terraform/state/tfstate/lock"
+      -backend-config="lock_method=POST"
+      -backend-config="unlock_method=DELETE"
+      -backend-config="username=terraform"
+      -backend-config="password=${TF_HTTP_PASSWORD}"
+      -backend-config="retry_wait_min=5"
+    - terraform validate
+    - terraform plan -out=tfplan
+  artifacts:
+    paths:
+      - ${TF_ROOT}/tfplan
+      - ${TF_ROOT}/.terraform
+    expire_in: 1 day
+  needs:
+    - checkov
+  rules:
+    - if: $OPERATION == "terraform"
+
+apply:
+  stage: apply
+  image:
+    name: hashicorp/terraform:latest
+    entrypoint: [""]
+  variables:
+    TF_VAR_cloud_id: ${CLOUD_ID}
+    TF_VAR_folder_id: ${FOLDER_ID}
+    TF_VAR_ssh_public_key: ${SSH_PUBLIC_KEY}
+    TF_VAR_ssh_private_key: ${SSH_PRIVATE_KEY}
+  script:
+    - cd ${TF_ROOT}
+    - echo ${AUTHORIZED_KEY} | base64 -d > ./authorized_key.json
+    - terraform init
+      -backend-config="address=https://cloud-services-engineer.gitlab.yandexcloud.net/api/v4/projects/${CI_PROJECT_ID}/terraform/state/tfstate"
+      -backend-config="lock_address=https://cloud-services-engineer.gitlab.yandexcloud.net/api/v4/projects/${CI_PROJECT_ID}/terraform/state/tfstate/lock"
+      -backend-config="unlock_address=https://cloud-services-engineer.gitlab.yandexcloud.net/api/v4/projects/${CI_PROJECT_ID}/terraform/state/tfstate/lock"
+      -backend-config="lock_method=POST"
+      -backend-config="unlock_method=DELETE"
+      -backend-config="username=terraform"
+      -backend-config="password=${TF_HTTP_PASSWORD}"
+      -backend-config="retry_wait_min=5"
+    - terraform apply -auto-approve
+  artifacts:
+    paths:
+      - ${TF_ROOT}/.terraform
+  needs:
+    - plan
+  dependencies:
+    - plan
+  rules:
+    - if: $OPERATION == "terraform" && $APPLY == "true"
+      when: manual
+
+destroy:
+  stage: destroy
+  image:
+    name: hashicorp/terraform:latest
+    entrypoint: [""]
+  variables:
+    TF_VAR_cloud_id: ${CLOUD_ID}
+    TF_VAR_folder_id: ${FOLDER_ID}
+    TF_VAR_ssh_public_key: ${SSH_PUBLIC_KEY}
+    TF_VAR_ssh_private_key: ${SSH_PRIVATE_KEY}
+  script:
+    - cd ${TF_ROOT}
+    - echo ${AUTHORIZED_KEY} | base64 -d > ./authorized_key.json
+    - terraform init
+      -backend-config="address=https://cloud-services-engineer.gitlab.yandexcloud.net/api/v4/projects/${CI_PROJECT_ID}/terraform/state/tfstate"
+      -backend-config="lock_address=https://cloud-services-engineer.gitlab.yandexcloud.net/api/v4/projects/${CI_PROJECT_ID}/terraform/state/tfstate/lock"
+      -backend-config="unlock_address=https://cloud-services-engineer.gitlab.yandexcloud.net/api/v4/projects/${CI_PROJECT_ID}/terraform/state/tfstate/lock"
+      -backend-config="lock_method=POST"
+      -backend-config="unlock_method=DELETE"
+      -backend-config="username=terraform"
+      -backend-config="password=${TF_HTTP_PASSWORD}"
+      -backend-config="retry_wait_min=5"
+    - terraform refresh
+    - terraform destroy -auto-approve
+  rules:
+    - if: $DESTROY == "true" && $OPERATION == "terraform"
+      when: manual
+
+terratest:
+  stage: terratest
+  image: golang:1.21
+  variables:
+    TF_VAR_cloud_id: ${CLOUD_ID}
+    TF_VAR_folder_id: ${FOLDER_ID}
+    TF_VAR_ssh_public_key: ${SSH_PUBLIC_KEY}
+    TF_VAR_ssh_private_key: ${SSH_PRIVATE_KEY}
+  script:
+    - cd test
+    - go mod init terratest
+    - go mod tidy
+    - go test -v -timeout 30m
+  needs:
+    - apply
+  dependencies:
+    - apply
+  allow_failure: false
+  rules:
+    - if: $APPLY == "true" && $OPERATION == "terraform"
+
+# ==================== ANSIBLE STAGE ====================
+
+ansible-deploy:
+  stage: ansible-deploy
+  script:
+    - terraform init
+      -backend-config="address=https://cloud-services-engineer.gitlab.yandexcloud.net/api/v4/projects/${CI_PROJECT_ID}/terraform/state/tfstate"
+      -backend-config="lock_address=https://cloud-services-engineer.gitlab.yandexcloud.net/api/v4/projects/${CI_PROJECT_ID}/terraform/state/tfstate/lock"
+      -backend-config="unlock_address=https://cloud-services-engineer.gitlab.yandexcloud.net/api/v4/projects/${CI_PROJECT_ID}/terraform/state/tfstate/lock"
+      -backend-config="lock_method=POST"
+      -backend-config="unlock_method=DELETE"
+      -backend-config="username=terraform"
+      -backend-config="password=${TF_HTTP_PASSWORD}"
+      -backend-config="retry_wait_min=5"
+    - export VM_DEV=$(terraform output -raw vm_dev_address)
+    - export VM_PROD=$(terraform output -raw vm_prod_address)
+    - cd ${ANSIBLE_ROOT}
+    - envsubst < ./inventory/template-vm.ini > ./inventory/vm.ini
+    
+    # Формирование полного MongoDB URI и запуск плейбука
+    - |
+      MONGODB_URI="mongodb://${VAULT_DB_USERNAME:-reports}:${VAULT_DB_PASSWORD:-reportspassword}@${MONGODB_HOST:-mongodb}:${MONGODB_PORT:-27017}/${VAULT_DB_NAME:-sausage-store}"
+
+      ansible-playbook -i inventory/vm.ini vault-playbook.yml \
+        -e "db_username=${VAULT_DB_USERNAME:-reports}" \
+        -e "db_password=${VAULT_DB_PASSWORD:-reportspassword}" \
+        -e "mongodb_uri=${MONGODB_URI}"
+  rules:
+    - if: $APPLY == "true" && $OPERATION == "ansible"
+
+# ==================== KUBERNETES STAGES ====================
+
+# Сборка и пуш Docker-образов в DockerHub
+build-and-push-images:
+  stage: build
+  before_script:
+    - docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+  script:
+    - docker build --build-arg VERSION=$CI_COMMIT_SHA --push -t $DOCKER_USER/sausage-backend:latest ./backend/
+    - docker build --push -t $DOCKER_USER/sausage-frontend:latest ./frontend/
+    - docker build --push -t $DOCKER_USER/sausage-backend-report:latest ./backend-report/
+  rules:
+    - if: $OPERATION == "k8s"
+      when: always
+
+
+# Упаковка и пуш Helm-чарта в Nexus
+package-helm-chart:
+  stage: package
+  image: 
+    name: alpine/helm:3.12.0
+    entrypoint: [""]
+  script:
+    - cd $CI_PROJECT_DIR
+    - apk add curl yq
+    - export CURRENT_VER=$(helm show chart ./sausage-store-chart | yq '.version')
+    - export NEW_VER=$(echo "$CURRENT_VER" | awk -F. '{$NF = $NF + 1;} 1' | sed 's/ /./g')
+    - yq e -i '.version = env(NEW_VER)' sausage-store-chart/Chart.yaml
+    - helm package ./sausage-store-chart/
+    - curl -u "$NEXUS_USER:$NEXUS_PASSWORD" $NEXUS_HELM_REPO_URL --upload-file *.tgz
+  needs:
+    - build-and-push-images
+  rules:
+    - if: $OPERATION == "k8s"
+  tags:
+    - docker
